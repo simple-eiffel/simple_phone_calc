@@ -23,7 +23,8 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem. It show
 **1.0.0**
 
 - 26 tests pass on the PC.
-- Nine sums tapped through the real screen pass on an emulator, at the default font size and at 1.5.
+- Nine sums tapped through the real screen pass on an emulator, at the default font size and at 1.5, and on one real phone.
+- The how-to was followed from an empty folder, with everything downloaded from GitHub.
 - The APK is under 1 MB.
 
 ## Quick start
