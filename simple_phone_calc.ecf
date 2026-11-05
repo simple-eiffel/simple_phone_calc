@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" name="simple_phone_calc" uuid="7B3E9C42-1D5A-4F86-9A27-6C0E8D14B3F5">
+	<description>A calculator for Android, written entirely in Eiffel with simple_eif_phone.</description>
+	<target name="simple_phone_calc">
+		<description>The app: compiled for the phone by eifphone. It needs the phone's headers, so it does not build on a PC.</description>
+		<root class="CALC_APP" feature="make"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="console_application" value="true"/>
+		<capability>
+			<void_safety support="all"/>
+		</capability>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+		<library name="simple_eif_phone" location="$SIMPLE_EIFFEL\simple_eif_phone\simple_eif_phone.ecf"/>
+		<cluster name="engine" location=".\src\engine\"/>
+		<cluster name="app" location=".\src\app\"/>
+	</target>
+	<target name="simple_phone_calc_tests">
+		<description>The tests: only the engine, on the PC, with no phone library.</description>
+		<root class="TEST_APP" feature="make"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="console_application" value="true"/>
+		<capability>
+			<concurrency support="scoop" use="thread"/>
+			<void_safety support="all"/>
+		</capability>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+		<library name="simple_testing" location="$SIMPLE_EIFFEL\simple_testing\simple_testing.ecf"/>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<cluster name="engine" location=".\src\engine\"/>
+		<cluster name="tests" location=".\testing\"/>
+	</target>
+</system>

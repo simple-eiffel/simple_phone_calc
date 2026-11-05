@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build an Android app in Eiffel</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+<p><a href="https://github.com/simple-eiffel/simple_phone_calc">simple_phone_calc on GitHub</a></p>
+<h1>Build an Android app in Eiffel, from nothing to a phone</h1>
+<p>This guide takes you from an empty folder to a calculator running on an Android phone. You write Eiffel and nothing else: no Java, no Kotlin, no XML layouts, no Gradle.</p>
+<p>The finished app is this repository, so every step can be checked against working code. It is small on purpose: about 240 lines of screen and 360 lines of logic, and the whole APK is under a megabyte.</p>
+<p><img alt="The calculator" src="images/calculator.png" /></p>
+<p><strong>You should already know</strong> the basics of Eiffel: classes, features, and what <code>require</code> and <code>ensure</code> mean. You do not need to know anything about Android.</p>
+<p><strong>You will learn to:</strong></p>
+<ul>
+<li>split an app into logic you can test on a PC and a thin screen on top</li>
+<li>use Design by Contract in a phone app, and read a broken contract in the phone's log</li>
+<li>lay out a screen from Eiffel with Android's own controls</li>
+<li>build, install and debug with one tool, <code>eifphone</code></li>
+<li>test at the font size real people use</li>
+<li>sign a release</li>
+</ul>
+<h2>1. How it works</h2>
+<p><code>eifphone</code> turns an Eiffel project into a signed APK. It does this in stages, and you will see each one go by when you build:</p>
+<ol>
+<li><strong>Gobo's <code>gec</code> compiles your Eiffel to C.</strong></li>
+<li><strong>The Android NDK's <code>clang</code> compiles that C</strong> to a native library, once for each processor type.</li>
+<li><strong>A small fixed Java helper</strong> that ships with the library is compiled to <code>classes.dex</code>. You never touch it.</li>
+<li><strong>The Android tools package, align and sign</strong> the APK.</li>
+</ol>
+<p>At run time your Eiffel owns the app. When you create a <code>PHONE_BUTTON</code>, Eiffel sends an order across to Android, and Android makes a real Android control. When someone taps it, the tap comes back to Eiffel as an event, and your agent runs. So the app looks and feels native, because it is: these are Android's own controls, with Android's own keyboard, accessibility and press effects.</p>
+<h2>2. What you need</h2>
+<p>You need a Windows PC. The tool runs on Windows only. Your app runs on Android 8.0 or later.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Version</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EiffelStudio</td>
+<td>25.02</td>
+<td>Compiling the tests on the PC, and its Eiffel base library</td>
+</tr>
+<tr>
+<td>Gobo <code>gec</code></td>
+<td>26.10</td>
+<td>Compiling Eiffel for the phone</td>
+</tr>
+<tr>
+<td>Android SDK</td>
+<td>build-tools 36.0.0, platform android-36, platform-tools</td>
+<td>Packaging and installing</td>
+</tr>
+<tr>
+<td>Android NDK</td>
+<td>30.0.16248370</td>
+<td>Compiling C for the phone</td>
+</tr>
+<tr>
+<td>A JDK</td>
+<td>17 or later</td>
+<td>Compiling the Java helper, signing</td>
+</tr>
+<tr>
+<td><code>git</code></td>
+<td>any</td>
+<td>Getting the libraries</td>
+</tr>
+</tbody>
+</table>
+<p>If you have Android's <code>sdkmanager</code>, this gets the Android parts:</p>
+<pre><code>sdkmanager &quot;ndk;30.0.16248370&quot; &quot;build-tools;36.0.0&quot; &quot;platforms;android-36&quot; &quot;platform-tools&quot;
+</code></pre>
+<p>Then tell the tool where everything is. These are the standard names:</p>
+<pre><code>set ANDROID_HOME=C:\android\sdk
+set ANDROID_NDK_HOME=C:\android\sdk\ndk\30.0.16248370
+set JAVA_HOME=C:\Program Files\Java\jdk-17
+set GOBO=C:\gobo
+set ISE_LIBRARY=C:\Program Files\Eiffel Software\EiffelStudio 25.02 Standard
+</code></pre>
+<p>The paths are examples. Use your own.</p>
+<h2>3. Get the libraries and the tool</h2>
+<p>Pick one folder to hold the Simple Eiffel libraries, and name it in <code>SIMPLE_EIFFEL</code>:</p>
+<pre><code>mkdir C:\simple
+set SIMPLE_EIFFEL=C:\simple
+cd C:\simple
+git clone https://github.com/simple-eiffel/simple_eif_phone
+git clone https://github.com/simple-eiffel/simple_mml
+git clone https://github.com/simple-eiffel/simple_testing
+</code></pre>
+<p><code>simple_eif_phone</code> is the phone library. <code>simple_mml</code> is what it stands on. <code>simple_testing</code> is only for the tests on the PC.</p>
+<p>Now get the tool. Download <code>eifphone.exe</code> from the <a href="https://github.com/simple-eiffel/simple_eif_phone/releases/latest">latest release</a>, put it in a folder on your <code>PATH</code>, and ask it what it can find:</p>
+<pre><code>eifphone doctor
+</code></pre>
+<p>It lists each tool it needs, and ends with:</p>
+<pre><code>doctor: all tools found
+</code></pre>
+<p>If it names something missing, fix that before you go on. Every later problem is easier once this line is clean.</p>
+<h2>4. Start the project</h2>
+<p><code>eifphone</code> can start a project for you:</p>
+<pre><code>eifphone new simple_phone_calc --id io.github.me.phonecalc --label &quot;Phone Calc&quot;
+</code></pre>
+<p>That writes a small working app that paints the screen. This guide uses Android's controls instead, so here is the layout we are heading for:</p>
+<pre><code>simple_phone_calc/
+    eifphone.toml             what the tool needs to know
+    simple_phone_calc.ecf     how to compile it
+    icon/ic_launcher.png      the icon on the phone
+    src/engine/calc_engine.e  the calculator: no phone in sight
+    src/app/calc_app.e        the screen
+    testing/                  tests, run on the PC
+</code></pre>
+<h3>eifphone.toml</h3>
+<pre><code class="language-toml">[app]
+id = &quot;io.github.simple_eiffel.phonecalc&quot;
+label = &quot;Phone Calc&quot;
+version_code = 1
+version_name = &quot;1.0.0&quot;
+icon = &quot;icon/ic_launcher.png&quot;
+
+[eiffel]
+ecf = &quot;simple_phone_calc.ecf&quot;
+target = &quot;simple_phone_calc&quot;
+
+[android]
+abis = [&quot;arm64-v8a&quot;, &quot;x86_64&quot;]
+min_sdk = 26
+target_sdk = 36
+controls = true
+orientation = &quot;portrait&quot;
+</code></pre>
+<p>Line by line, the ones that matter:</p>
+<ul>
+<li><strong><code>id</code></strong> is your app's name to Android. It must be unique on the phone, and you should never change it once people have the app. Use a domain you control, turned around.</li>
+<li><strong><code>label</code></strong> is the name under the icon.</li>
+<li><strong><code>version_code</code></strong> must go up with each release you hand out. <code>version_name</code> is what people see.</li>
+<li><strong><code>abis</code></strong> are processor types. <code>arm64-v8a</code> is nearly every real phone. <code>x86_64</code> is the emulator. Keep both.</li>
+<li><strong><code>controls = true</code></strong> says this app uses Android's own controls. Without it, you get a bare window to draw on.</li>
+<li><strong><code>orientation</code></strong> holds the screen upright, because five rows of keys will not fit sideways. Leave it out and the app turns with the phone.</li>
+</ul>
+<h3>The ECF</h3>
+<p>The ECF has two targets, and that is the heart of the design:</p>
+<pre><code class="language-xml">&lt;target name=&quot;simple_phone_calc&quot;&gt;
+    &lt;root class=&quot;CALC_APP&quot; feature=&quot;make&quot;/&gt;
+    ...
+    &lt;library name=&quot;base&quot; location=&quot;$ISE_LIBRARY\library\base\base.ecf&quot;/&gt;
+    &lt;library name=&quot;simple_eif_phone&quot; location=&quot;$SIMPLE_EIFFEL\simple_eif_phone\simple_eif_phone.ecf&quot;/&gt;
+    &lt;cluster name=&quot;engine&quot; location=&quot;.\src\engine\&quot;/&gt;
+    &lt;cluster name=&quot;app&quot; location=&quot;.\src\app\&quot;/&gt;
+&lt;/target&gt;
+&lt;target name=&quot;simple_phone_calc_tests&quot;&gt;
+    &lt;root class=&quot;TEST_APP&quot; feature=&quot;make&quot;/&gt;
+    ...
+    &lt;library name=&quot;base&quot; location=&quot;$ISE_LIBRARY\library\base\base.ecf&quot;/&gt;
+    &lt;library name=&quot;simple_testing&quot; location=&quot;$SIMPLE_EIFFEL\simple_testing\simple_testing.ecf&quot;/&gt;
+    &lt;library name=&quot;testing&quot; location=&quot;$ISE_LIBRARY\library\testing\testing.ecf&quot;/&gt;
+    &lt;cluster name=&quot;engine&quot; location=&quot;.\src\engine\&quot;/&gt;
+    &lt;cluster name=&quot;tests&quot; location=&quot;.\testing\&quot;/&gt;
+&lt;/target&gt;
+</code></pre>
+<p>The app target has the engine, the screen and the phone library. It is only ever compiled for the phone. The test target has the engine and the tests, and <strong>no phone library at all</strong>, so it compiles and runs on your PC in seconds.</p>
+<p>The app target also sets <code>console_application</code> and turns all the assertions on. Keep them on while you develop. See section 10.</p>
+<h2>5. The engine: a calculator with no screen</h2>
+<p>Write the logic first, in a class that has never heard of a phone. <code>CALC_ENGINE</code> knows what each key does and what the display should say. That is all. See <code>src/engine/calc_engine.e</code>.</p>
+<p>Its public face is a few queries and one command for each key:</p>
+<pre><code class="language-eiffel">display: STRING_32
+        -- What the calculator shows.
+
+pending_operator: INTEGER
+        -- The operator waiting for its second number.
+
+is_in_error: BOOLEAN
+        -- Is the calculator showing an error? Only `press_clear' may follow.
+</code></pre>
+<h3>Contracts say the rules out loud</h3>
+<p>Here is the key for a digit:</p>
+<pre><code class="language-eiffel">press_digit (a_digit: INTEGER)
+        -- Add `a_digit' to the number being typed, or start a new one.
+    require
+        a_digit_valid: a_digit &gt;= 0 and a_digit &lt;= 9
+        not_in_error: not is_in_error
+    do
+        ...
+    ensure
+        typing: is_typing
+        operator_unchanged: pending_operator = old pending_operator
+    end
+</code></pre>
+<p>The <code>require</code> clause is a rule for the caller: you may press a digit, but only a real digit, and not while an error is showing. The <code>ensure</code> clause is the engine's promise back. <code>operator_unchanged</code> says that typing a digit never disturbs a sum in progress, and <code>old</code> is how you talk about the value before the call.</p>
+<p>The class also keeps promises at all times, in its invariant:</p>
+<pre><code class="language-eiffel">invariant
+    display_exists: not display.is_empty
+    operator_known: pending_operator = Op_none or is_operator (pending_operator)
+    error_ends_the_sum: is_in_error implies pending_operator = Op_none
+</code></pre>
+<p>The display is never blank, and an error never leaves a sum half done. These are checked at run time, on the phone as well as on your PC.</p>
+<h3>Why 0.1 + 0.2 shows 0.3</h3>
+<p>A <code>REAL_64</code> cannot hold 0.1 exactly, so 0.1 + 0.2 comes out as 0.30000000000000004. A calculator that showed that would be laughed at. The answer is to round when you show a number, not when you hold it. <code>text_of</code> keeps twelve significant digits and drops trailing zeros:</p>
+<pre><code class="language-eiffel">l_scaled := (a_value.abs * l_scale.to_double + 0.5).truncated_to_integer_64
+l_whole := l_scaled // l_scale
+l_fraction := l_scaled \\ l_scale
+</code></pre>
+<p>Numbers of a trillion and up show "Too large", so that this arithmetic always fits in an <code>INTEGER_64</code>. That limit is a precondition of <code>text_of</code> too: <code>fits: a_value.abs &lt; Largest</code>.</p>
+<h2>6. Test it on the PC</h2>
+<p>Tests press keys and read the display, exactly as a person would. From <code>testing/lib_tests.e</code>:</p>
+<pre><code class="language-eiffel">test_point_one_plus_point_two
+    local
+        e: CALC_ENGINE
+    do
+        e := new_engine
+        e.press_point
+        e.press_digit (1)
+        e.press_operator (e.Op_add)
+        e.press_point
+        e.press_digit (2)
+        e.press_equals
+        shows (&quot;no noise&quot;, e, &quot;0.3&quot;)
+    end
+</code></pre>
+<p>Compile and run them. From the project folder, in EiffelStudio's command line tools:</p>
+<pre><code>ec -batch -config simple_phone_calc.ecf -target simple_phone_calc_tests -finalize -keep -c_compile
+EIFGENs\simple_phone_calc_tests\F_code\simple_phone_calc.exe
+</code></pre>
+<p><code>-keep</code> keeps the contracts switched on in a finalized build. You should see 26 lines of <code>PASS</code>, and then:</p>
+<pre><code>Results: 26 passed, 0 failed
+ALL TESTS PASSED
+</code></pre>
+<p>Get this right before you go near a phone. A test here takes a moment. A test on a phone takes a build and an install.</p>
+<p>One test is worth a look, because the contract itself is what it tests. <code>test_contract_guards_error</code> presses a digit during an error, and passes only if the precondition refuses it.</p>
+<h2>7. The screen</h2>
+<p>Now the phone. <code>CALC_APP</code> is the root class, and it does three things: build the controls, show them, and hand over to the phone.</p>
+<pre><code class="language-eiffel">make
+        -- Build the screen, then hand over to the phone until it ends the app.
+    local
+        l_screen: PHONE_COLUMN
+    do
+        create phone.make
+        controls := phone.controls
+        create engine.make
+        create display.make (controls, engine.display)
+        create l_screen.make (controls)
+        l_screen.set_surface (Background, 0)
+        l_screen.set_spacing (Gap, Gap)
+        build_display (l_screen)
+        build_keys (l_screen)
+        controls.show (l_screen)
+        phone.run_controls
+    end
+</code></pre>
+<ul>
+<li><strong><code>SIMPLE_EIF_PHONE</code></strong> is the phone: its life, its screen, its log. Make exactly one.</li>
+<li><strong><code>PHONE_CONTROLS</code></strong> makes and shows Android's controls.</li>
+<li><strong><code>phone.run_controls</code></strong> is the event loop. It returns only when Android ends the app. Everything after this happens in your agents.</li>
+</ul>
+<h3>Layout</h3>
+<p>Layout is boxes inside boxes. <code>PHONE_COLUMN</code> stacks its children down the screen, and <code>PHONE_ROW</code> lines them up across. Each has two ways to add a child:</p>
+<ul>
+<li><strong><code>extend</code></strong> gives the child its natural size.</li>
+<li><strong><code>extend_growing (child, share)</code></strong> gives it a share of the room left over.</li>
+</ul>
+<p>That is enough for the whole screen. The rows of keys are added with <code>extend</code>, so they keep their size. The display is added with <code>extend_growing</code>, so it takes everything the keys leave, on any size of phone:</p>
+<pre><code class="language-eiffel">a_screen.extend_growing (display, 1)
+</code></pre>
+<p>Inside each row, the keys share the width by the same rule. The <code>0</code> key has a share of 2 and the rest have 1, which is why it is twice as wide.</p>
+<h3>One key</h3>
+<pre><code class="language-eiffel">add_key (a_row: PHONE_ROW; a_text: READABLE_STRING_32; a_color: NATURAL_32; a_action: PROCEDURE [TUPLE]; a_share: INTEGER)
+        -- A key showing `a_text' that runs `a_action' when tapped.
+    local
+        l_key: PHONE_LABEL
+    do
+        create l_key.make (controls, a_text)
+        l_key.set_style (Key_size, False)
+        l_key.call_integer (&quot;setGravity&quot;, Center)
+        l_key.set_color (if a_color = Loud_key then On_loud_key else On_background end)
+        l_key.set_least_height (Key_height)
+        l_key.set_surface (a_color, Key_corner)
+        l_key.set_on_tap (a_action)
+        a_row.extend_growing (l_key, a_share)
+    end
+</code></pre>
+<p>A key is a label with a rounded surface and a tap action. <code>set_on_tap</code> takes an Eiffel agent, and Android's press effect comes for free.</p>
+<p>Three things here are worth knowing about every app you write:</p>
+<ul>
+<li><strong>Sizes.</strong> <code>set_least_height</code>, <code>set_spacing</code> and the like are in density-independent pixels, so they look the same on every screen. <code>set_style</code> is in scale-independent pixels, which also follow the person's font setting.</li>
+<li><strong>Least, not fixed.</strong> <code>set_least_height</code> lets a key grow if its text needs it. <code>set_height</code> would cut the text off.</li>
+<li><strong><code>call_integer</code>.</strong> The library has classes for the common things. For anything else, <code>call_integer ("setGravity", Center)</code> calls that method on the Android control by name. Here, <code>setGravity</code> is <a href="https://developer.android.com/reference/android/widget/TextView#setGravity(int)">Android's own TextView method</a>, and 17 is Android's number for "center". You can reach most of Android this way without writing Java.</li>
+</ul>
+<h3>Taps</h3>
+<p>Each key's agent is one short routine:</p>
+<pre><code class="language-eiffel">on_digit (a_digit: INTEGER)
+    do
+        leave_error
+        engine.press_digit (a_digit)
+        show_display
+    end
+</code></pre>
+<p>The screen has no logic of its own. It turns a tap into a key press and shows the answer. This is why the tests on the PC can be trusted: nearly everything that could go wrong is in the class they test.</p>
+<p><code>leave_error</code> is where the contract meets the person:</p>
+<pre><code class="language-eiffel">leave_error
+        -- The engine takes no key but clear after an error, as its contracts say.
+        -- For the person tapping, any key starts over.
+    do
+        if engine.is_in_error then
+            engine.press_clear
+        end
+    ensure
+        ready: not engine.is_in_error
+    end
+</code></pre>
+<p>The engine's rule is strict, and the screen's job is to keep it. That is what <code>require</code> means: it is the caller's duty, and here the caller meets it.</p>
+<h3>Signs that are not on your keyboard</h3>
+<p>Keep your class files in plain ASCII, and write characters like <code>÷</code> by their number:</p>
+<pre><code class="language-eiffel">Divide_sign: STRING_32 = &quot;%/247/&quot;
+Delete_sign: STRING_32 = &quot;%/9003/&quot;
+</code></pre>
+<h2>8. Build it</h2>
+<p>From the project folder:</p>
+<pre><code>eifphone build .
+</code></pre>
+<p>You will watch the stages go by:</p>
+<pre><code>  ok  generate_c (0 s)
+  ok  compile arm64-v8a (5 s)
+  ok  link arm64-v8a (0 s)
+  ok  compile x86_64 (5 s)
+  ok  link x86_64 (0 s)
+  ok  dex (1 s)
+  ok  package (0 s)
+  ok  align (0 s)
+  ok  check_align (0 s)
+  ok  sign (0 s)
+built .\build\simple_phone_calc.apk
+</code></pre>
+<p>If a stage fails, the tool stops and names it, and gives you the file with the full output.</p>
+<h2>9. Run it</h2>
+<p>You can use an emulator or a real phone.</p>
+<p><strong>A real phone.</strong> Turn on Developer options: in Settings, open About phone and tap Build number seven times. Then turn on USB debugging in Developer options, connect the phone, and accept the prompt on its screen.</p>
+<p><strong>An emulator.</strong> Create one in Android Studio's Device Manager, or with <code>avdmanager</code>, and start it.</p>
+<p>Then:</p>
+<pre><code>eifphone run .
+</code></pre>
+<p>That installs the app, starts it, and shows the first few seconds of its log. Try <code>12.5 × 4 =</code>, then <code>0.1 + 0.2 =</code>, then <code>1 ÷ 0 =</code>.</p>
+<p>If more than one device is attached, name one. <code>adb devices</code> lists them:</p>
+<pre><code>eifphone run . --device=emulator-5554
+</code></pre>
+<h2>10. When something goes wrong</h2>
+<p>This is where contracts pay for themselves. To see it, break the app on purpose. In <code>leave_error</code>, take out the call to <code>press_clear</code> and the <code>ensure</code> clause, build, and run. Then tap <code>1 ÷ 0 =</code>, and then <code>7</code>.</p>
+<p>The app stops. Now ask why:</p>
+<pre><code>eifphone log . --crash
+</code></pre>
+<p>Among the lines is the answer:</p>
+<pre><code>EiffelOut: simple_phone_calc: system execution failed.
+EiffelOut: Following is the set of recorded exceptions:
+EiffelOut: Class / Object      Routine                Nature of exception           Effect
+EiffelOut: CALC_APP            root's creation        not_in_error:
+EiffelOut: &lt;0000000000000000&gt;                         Precondition violated.        Fail
+</code></pre>
+<p>The log names the exact contract that broke: <code>not_in_error</code>. In a language without contracts, this bug would show a wrong number and say nothing. Here the phone tells you which rule was broken.</p>
+<p>Two things to know when you read it:</p>
+<ul>
+<li><strong>The routine column says "root's creation".</strong> On the phone the trace does not name the routine, so search your code for the clause name. That is one more reason to give every clause a good name.</li>
+<li><strong>Lines after it about mutexes or EGL are noise.</strong> Those are Android cleaning up the process.</li>
+</ul>
+<p>For everything the app logs, not only crashes:</p>
+<pre><code>eifphone log .
+</code></pre>
+<p>To write to the log yourself:</p>
+<pre><code class="language-eiffel">phone.log.info (&quot;got here&quot;)
+</code></pre>
+<p>Undo the change before you go on.</p>
+<h2>11. Test at a large font size</h2>
+<p>Many people turn their phone's text up. An app can look perfect at the default size and fall apart at theirs, and an emulator will never show you, because it sits at the default.</p>
+<p>So set your emulator the way a real phone might be:</p>
+<pre><code>adb shell settings put system font_scale 1.5
+adb shell wm density 450
+</code></pre>
+<p>Run the app again. The keys here hold up because they use <code>set_least_height</code>, and the display drops to a smaller size when its number is long. Put the emulator back when you are done:</p>
+<pre><code>adb shell settings put system font_scale 1.0
+adb shell wm density reset
+</code></pre>
+<h2>12. Sign a release</h2>
+<p>So far the tool has signed with a shared debug key. That is fine for your own phone. For anything you hand to other people, make your own key. Keep it safe: you cannot update your app without it.</p>
+<pre><code>keytool -genkeypair -v -keystore C:\keys\phonecalc.jks -alias phonecalc -keyalg RSA -keysize 2048 -validity 10000
+</code></pre>
+<p>Then add this to <code>eifphone.toml</code>:</p>
+<pre><code class="language-toml">[signing]
+keystore = &quot;C:/keys/phonecalc.jks&quot;
+alias = &quot;phonecalc&quot;
+password_env = &quot;PHONECALC_KS_PASS&quot;
+</code></pre>
+<p>The password stays out of the file. The tool reads it from the variable you name:</p>
+<pre><code>set PHONECALC_KS_PASS=your password
+eifphone build .
+</code></pre>
+<p>Never commit the key. This repository's <code>.gitignore</code> refuses <code>*.jks</code>, <code>*.keystore</code> and <code>*.apk</code>, and yours should too.</p>
+<p>For a release build, you can also turn the contracts off to make the app a little faster. <code>eifphone new</code> writes a second target for that, with every assertion off, and <code>target</code> in <code>eifphone.toml</code> chooses it. A calculator has no need: leave them on and a bug stays loud.</p>
+<h2>13. Where to go next</h2>
+<p>Try these on your own, in this order. Each one teaches something new:</p>
+<ol>
+<li><strong>Add a percent key.</strong> Write the test first, then the command with its contract, then the key.</li>
+<li><strong>Add a square root key.</strong> What should its precondition be, and what should the screen do about it?</li>
+<li><strong>Keep the last answer across restarts.</strong> See <code>phone.storage</code> in the <a href="https://simple-eiffel.github.io/simple_eif_phone/api-reference.html">API reference</a>.</li>
+<li><strong>Read the display aloud</strong> with <code>PHONE_VOICES</code>.</li>
+</ol>
+<p>More to read:</p>
+<ul>
+<li><a href="https://simple-eiffel.github.io/simple_eif_phone/user-guide.html">The simple_eif_phone user guide</a></li>
+<li><a href="https://simple-eiffel.github.io/simple_eif_phone/api-reference.html">Its API reference</a>, with every control and its contracts</li>
+<li><a href="https://simple-eiffel.github.io/simple_eif_phone/#limits">Its known limitations</a>, which you should read before you rely on it</li>
+</ul>
+<p>The library is young. If a step here does not work for you, please <a href="https://github.com/simple-eiffel/simple_phone_calc/issues">open an issue</a>.</p>
+</main>
+</body>
+</html>

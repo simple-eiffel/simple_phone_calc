@@ -1,0 +1,17 @@
+[app]
+id = "io.github.simple_eiffel.phonecalc"
+label = "Phone Calc"
+version_code = 1
+version_name = "1.0.0"
+icon = "icon/ic_launcher.png"
+
+[eiffel]
+ecf = "simple_phone_calc.ecf"
+target = "simple_phone_calc"
+
+[android]
+abis = ["arm64-v8a", "x86_64"]
+min_sdk = 26
+target_sdk = 36
+controls = true
+orientation = "portrait"

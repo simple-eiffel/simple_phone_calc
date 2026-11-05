@@ -1,0 +1,13 @@
+EIFGENs/
+build/
+gen/
+out/
+*.log
+*.rc
+
+# Signing keys and built apps never go in the repo
+*.jks
+*.keystore
+*.apk
+*.aab
+*.idsig
