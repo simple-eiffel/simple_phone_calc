@@ -4,6 +4,8 @@ This guide takes you from an empty folder to a calculator running on an Android 
 
 The finished app is this repository, so every step can be checked against working code. It is small on purpose: about 240 lines of screen and 360 lines of logic, and the whole APK is under a megabyte.
 
+**Prefer paper or a tablet?** [This guide is also a PDF](docs/simple_phone_calc_howto.pdf).
+
 ![The calculator](docs/images/calculator.png)
 
 **You should already know** the basics of Eiffel: classes, features, and what `require` and `ensure` mean. You do not need to know anything about Android.
@@ -26,7 +28,15 @@ The finished app is this repository, so every step can be checked against workin
 3. **A small fixed Java helper** that ships with the library is compiled to `classes.dex`. You never touch it.
 4. **The Android tools package, align and sign** the APK.
 
+![How a build works](docs/images/pipeline.svg)
+
+*One command takes your Eiffel to a signed APK.*
+
 At run time your Eiffel owns the app. When you create a `PHONE_BUTTON`, Eiffel sends an order across to Android, and Android makes a real Android control. When someone taps it, the tap comes back to Eiffel as an event, and your agent runs. So the app looks and feels native, because it is: these are Android's own controls, with Android's own keyboard, accessibility and press effects.
+
+![How a tap travels](docs/images/roundtrip.svg)
+
+*Orders go down to Android, and events come back up to your agents.*
 
 ## 2. What you need
 
@@ -165,6 +175,10 @@ The ECF has two targets, and that is the heart of the design:
 ```
 
 The app target has the engine, the screen and the phone library. It is only ever compiled for the phone. The test target has the engine and the tests, and **no phone library at all**, so it compiles and runs on your PC in seconds.
+
+![Two targets share the engine](docs/images/targets.svg)
+
+*The engine is in both targets. Only the app target knows there is a phone.*
 
 The app target also sets `console_application` and turns all the assertions on. Keep them on while you develop. See section 10.
 
@@ -309,6 +323,10 @@ a_screen.extend_growing (display, 1)
 
 Inside each row, the keys share the width by the same rule. The `0` key has a share of 2 and the rest have 1, which is why it is twice as wide.
 
+![The screen, labelled](docs/images/layout.png)
+
+*Two ways of adding a child build the whole screen.*
+
 ### One key
 
 ```eiffel
@@ -419,6 +437,10 @@ eifphone run .
 
 That installs the app, starts it, and shows the first few seconds of its log. Try `12.5 × 4 =`, then `0.1 + 0.2 =`, then `1 ÷ 0 =`.
 
+![Three sums on the phone](docs/images/sums.png)
+
+*What you should see. The error is the engine's message, shown until the next key.*
+
 If more than one device is attached, name one. `adb devices` lists them:
 
 ```
@@ -477,7 +499,13 @@ adb shell settings put system font_scale 1.5
 adb shell wm density 450
 ```
 
-Run the app again. The keys here hold up because they use `set_least_height`, and the display drops to a smaller size when its number is long. Put the emulator back when you are done:
+Run the app again. The keys here hold up because they use `set_least_height`, and the display drops to a smaller size when its number is long.
+
+![The same sum at two text sizes](docs/images/font_sizes.png)
+
+*The same sum at two text sizes. The keys grow, and the display gives up the room.*
+
+Put the emulator back when you are done:
 
 ```
 adb shell settings put system font_scale 1.0

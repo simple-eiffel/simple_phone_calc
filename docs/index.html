@@ -12,6 +12,7 @@
 <h1>Build an Android app in Eiffel, from nothing to a phone</h1>
 <p>This guide takes you from an empty folder to a calculator running on an Android phone. You write Eiffel and nothing else: no Java, no Kotlin, no XML layouts, no Gradle.</p>
 <p>The finished app is this repository, so every step can be checked against working code. It is small on purpose: about 240 lines of screen and 360 lines of logic, and the whole APK is under a megabyte.</p>
+<p><strong>Prefer paper or a tablet?</strong> <a href="simple_phone_calc_howto.pdf">This guide is also a PDF</a>.</p>
 <p><img alt="The calculator" src="images/calculator.png" /></p>
 <p><strong>You should already know</strong> the basics of Eiffel: classes, features, and what <code>require</code> and <code>ensure</code> mean. You do not need to know anything about Android.</p>
 <p><strong>You will learn to:</strong></p>
@@ -31,7 +32,11 @@
 <li><strong>A small fixed Java helper</strong> that ships with the library is compiled to <code>classes.dex</code>. You never touch it.</li>
 <li><strong>The Android tools package, align and sign</strong> the APK.</li>
 </ol>
+<p><img alt="How a build works" src="images/pipeline.svg" /></p>
+<p><em>One command takes your Eiffel to a signed APK.</em></p>
 <p>At run time your Eiffel owns the app. When you create a <code>PHONE_BUTTON</code>, Eiffel sends an order across to Android, and Android makes a real Android control. When someone taps it, the tap comes back to Eiffel as an event, and your agent runs. So the app looks and feels native, because it is: these are Android's own controls, with Android's own keyboard, accessibility and press effects.</p>
+<p><img alt="How a tap travels" src="images/roundtrip.svg" /></p>
+<p><em>Orders go down to Android, and events come back up to your agents.</em></p>
 <h2>2. What you need</h2>
 <p>You need a Windows PC. The tool runs on Windows only. Your app runs on Android 8.0 or later.</p>
 <table>
@@ -166,6 +171,8 @@ orientation = &quot;portrait&quot;
 &lt;/target&gt;
 </code></pre>
 <p>The app target has the engine, the screen and the phone library. It is only ever compiled for the phone. The test target has the engine and the tests, and <strong>no phone library at all</strong>, so it compiles and runs on your PC in seconds.</p>
+<p><img alt="Two targets share the engine" src="images/targets.svg" /></p>
+<p><em>The engine is in both targets. Only the app target knows there is a phone.</em></p>
 <p>The app target also sets <code>console_application</code> and turns all the assertions on. Keep them on while you develop. See section 10.</p>
 <h2>5. The engine: a calculator with no screen</h2>
 <p>Write the logic first, in a class that has never heard of a phone. <code>CALC_ENGINE</code> knows what each key does and what the display should say. That is all. See <code>src/engine/calc_engine.e</code>.</p>
@@ -269,6 +276,8 @@ ALL TESTS PASSED
 <pre><code class="language-eiffel">a_screen.extend_growing (display, 1)
 </code></pre>
 <p>Inside each row, the keys share the width by the same rule. The <code>0</code> key has a share of 2 and the rest have 1, which is why it is twice as wide.</p>
+<p><img alt="The screen, labelled" src="images/layout.png" /></p>
+<p><em>Two ways of adding a child build the whole screen.</em></p>
 <h3>One key</h3>
 <pre><code class="language-eiffel">add_key (a_row: PHONE_ROW; a_text: READABLE_STRING_32; a_color: NATURAL_32; a_action: PROCEDURE [TUPLE]; a_share: INTEGER)
         -- A key showing `a_text' that runs `a_action' when tapped.
@@ -346,6 +355,8 @@ built .\build\simple_phone_calc.apk
 <pre><code>eifphone run .
 </code></pre>
 <p>That installs the app, starts it, and shows the first few seconds of its log. Try <code>12.5 × 4 =</code>, then <code>0.1 + 0.2 =</code>, then <code>1 ÷ 0 =</code>.</p>
+<p><img alt="Three sums on the phone" src="images/sums.png" /></p>
+<p><em>What you should see. The error is the engine's message, shown until the next key.</em></p>
 <p>If more than one device is attached, name one. <code>adb devices</code> lists them:</p>
 <pre><code>eifphone run . --device=emulator-5554
 </code></pre>
@@ -380,7 +391,10 @@ EiffelOut: &lt;0000000000000000&gt;                         Precondition violate
 <pre><code>adb shell settings put system font_scale 1.5
 adb shell wm density 450
 </code></pre>
-<p>Run the app again. The keys here hold up because they use <code>set_least_height</code>, and the display drops to a smaller size when its number is long. Put the emulator back when you are done:</p>
+<p>Run the app again. The keys here hold up because they use <code>set_least_height</code>, and the display drops to a smaller size when its number is long.</p>
+<p><img alt="The same sum at two text sizes" src="images/font_sizes.png" /></p>
+<p><em>The same sum at two text sizes. The keys grow, and the display gives up the room.</em></p>
+<p>Put the emulator back when you are done:</p>
 <pre><code>adb shell settings put system font_scale 1.0
 adb shell wm density reset
 </code></pre>

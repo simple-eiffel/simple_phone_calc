@@ -18,6 +18,8 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem. It show
 
 **[HOWTO.md](HOWTO.md)** takes you through every step: tools, project, contracts, tests, screen, build, debugging and signing. You write Eiffel and nothing else.
 
+Prefer paper or a tablet? **[Download the guide as a PDF](docs/simple_phone_calc_howto.pdf)**, with diagrams and screenshots.
+
 ## Status
 
 **1.0.0**

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#E8C36A"/></marker>
+  </defs>
+  <rect width="760" height="300" rx="14" fill="#14161C"/>
+  <rect x="16" y="16" width="728" height="118" rx="12" fill="#1C1F27"/>
+  <rect x="16" y="168" width="728" height="118" rx="12" fill="#1C1F27"/>
+  <text x="32" y="38" fill="#E8C36A" font-size="13" font-weight="700">YOUR EIFFEL</text>
+  <text x="32" y="274" fill="#E8C36A" font-size="13" font-weight="700">ANDROID</text>
+  <g fill="#2A2E38">
+    <rect x="44" y="50" width="176" height="66" rx="12"/>
+    <rect x="292" y="50" width="176" height="66" rx="12"/>
+    <rect x="540" y="50" width="176" height="66" rx="12"/>
+    <rect x="44" y="186" width="176" height="66" rx="12"/>
+    <rect x="292" y="186" width="176" height="66" rx="12"/>
+    <rect x="540" y="186" width="176" height="66" rx="12"/>
+  </g>
+  <g fill="#ECE7DA" font-size="15" font-weight="600" text-anchor="middle">
+    <text x="132" y="79">create the key</text>
+    <text x="380" y="79">on_digit (7)</text>
+    <text x="628" y="79">show_display</text>
+    <text x="132" y="215">A real control</text>
+    <text x="380" y="215">Someone taps 7</text>
+    <text x="628" y="215">The screen shows 7</text>
+  </g>
+  <g fill="#A8A496" font-size="12.5" text-anchor="middle">
+    <text x="132" y="99">PHONE_LABEL.make</text>
+    <text x="380" y="99">your agent runs</text>
+    <text x="628" y="99">display.set_text</text>
+    <text x="132" y="235">on the screen</text>
+    <text x="380" y="235">with Android's press effect</text>
+    <text x="628" y="235">in the same control</text>
+  </g>
+  <g stroke="#E8C36A" stroke-width="2" fill="none" marker-end="url(#a)">
+    <path d="M132,116 V182"/>
+    <path d="M380,186 V120"/>
+    <path d="M468,83 H536"/>
+    <path d="M628,116 V182"/>
+  </g>
+  <g fill="#E8C36A" font-size="13" font-weight="600">
+    <text x="142" y="156">order</text>
+    <text x="390" y="156">event</text>
+    <text x="638" y="156">order</text>
+  </g>
+  <text x="502" y="72" fill="#A8A496" font-size="11.5" text-anchor="middle">engine</text>
+</svg>

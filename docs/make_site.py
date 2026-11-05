@@ -4,7 +4,7 @@ import markdown
 
 here = os.path.dirname(os.path.abspath(__file__))
 text = open(os.path.join(here, '..', 'HOWTO.md'), encoding='utf-8').read()
-text = text.replace('](docs/images/', '](images/')
+text = text.replace('](docs/', '](')
 body = markdown.markdown(text, extensions=['fenced_code', 'tables', 'sane_lists'])
 page = '''<!DOCTYPE html>
 <html lang="en">
