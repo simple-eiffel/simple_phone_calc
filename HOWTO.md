@@ -35,7 +35,7 @@ You need a Windows PC. The tool runs on Windows only. Your app runs on Android 8
 | Tool | Version | Used for |
 |---|---|---|
 | EiffelStudio | 25.02 | Compiling the tests on the PC, and its Eiffel base library |
-| Gobo `gec` | 26.10 | Compiling Eiffel for the phone |
+| [Gobo](https://github.com/gobo-eiffel/gobo/releases/tag/gobo-26.10) `gec` | 26.10 | Compiling Eiffel for the phone |
 | Android SDK | build-tools 36.0.0, platform android-36, platform-tools | Packaging and installing |
 | Android NDK | 30.0.16248370 | Compiling C for the phone |
 | A JDK | 17 or later | Compiling the Java helper, signing |
@@ -54,6 +54,7 @@ set ANDROID_HOME=C:\android\sdk
 set ANDROID_NDK_HOME=C:\android\sdk\ndk\30.0.16248370
 set JAVA_HOME=C:\Program Files\Java\jdk-17
 set GOBO=C:\gobo
+set GOBO_LIBRARY=C:\gobo\library
 set ISE_LIBRARY=C:\Program Files\Eiffel Software\EiffelStudio 25.02 Standard
 ```
 
