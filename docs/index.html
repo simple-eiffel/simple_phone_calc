@@ -51,7 +51,7 @@
 <tr>
 <td>EiffelStudio</td>
 <td>25.02</td>
-<td>Compiling the tests on the PC, and its Eiffel base library</td>
+<td>Its Eiffel base library, and the tests on the PC</td>
 </tr>
 <tr>
 <td><a href="https://github.com/gobo-eiffel/gobo/releases/tag/gobo-26.10">Gobo</a> <code>gec</code></td>
@@ -80,6 +80,11 @@
 </tr>
 </tbody>
 </table>
+<p>Why two Eiffel compilers?</p>
+<ul>
+<li><strong>The phone needs <code>gec</code>.</strong> Gobo ships its runtime as C source, which the NDK can compile for a phone. The EiffelStudio install has only headers and prebuilt Windows libraries, with no runtime source to compile.</li>
+<li><strong>The tests here use EiffelStudio because of one clause.</strong> They use its testing library, and <code>gec</code> stops on a <code>convert</code> clause in that library's <code>EQA_SYSTEM_PATH</code>, with six VYCP-4 errors. <code>ec</code> accepts the clause. With that clause cut down in a private copy, <code>gec</code> compiled the tests and all 26 passed.</li>
+</ul>
 <p>If you have Android's <code>sdkmanager</code>, this gets the Android parts:</p>
 <pre><code>sdkmanager &quot;ndk;30.0.16248370&quot; &quot;build-tools;36.0.0&quot; &quot;platforms;android-36&quot; &quot;platform-tools&quot;
 </code></pre>
@@ -87,10 +92,12 @@
 <pre><code>set ANDROID_HOME=C:\android\sdk
 set ANDROID_NDK_HOME=C:\android\sdk\ndk\30.0.16248370
 set JAVA_HOME=C:\Program Files\Java\jdk-17
-set GOBO=C:\gobo
-set GOBO_LIBRARY=C:\gobo\library
 set ISE_LIBRARY=C:\Program Files\Eiffel Software\EiffelStudio 25.02 Standard
 </code></pre>
+<p>Then put Gobo's <code>bin</code> folder on your <code>PATH</code>, so the tool can find <code>gec</code>:</p>
+<pre><code>set PATH=C:\gobo\bin;%PATH%
+</code></pre>
+<p>You do not need <code>GOBO</code> or <code>GOBO_LIBRARY</code>. Gobo's tools work those out for themselves.</p>
 <p>The paths are examples. Use your own.</p>
 <h2>3. Get the libraries and the tool</h2>
 <p>Pick one folder to hold the Simple Eiffel libraries, and name it in <code>SIMPLE_EIFFEL</code>:</p>
@@ -173,7 +180,7 @@ orientation = &quot;portrait&quot;
 <p>The app target has the engine, the screen and the phone library. It is only ever compiled for the phone. The test target has the engine and the tests, and <strong>no phone library at all</strong>, so it compiles and runs on your PC in seconds.</p>
 <p><img alt="Two targets share the engine" src="images/targets.svg" /></p>
 <p><em>The engine is in both targets. Only the app target knows there is a phone.</em></p>
-<p>The app target also sets <code>console_application</code> and turns all the assertions on. Keep them on while you develop. See section 10.</p>
+<p>The app target also sets <code>console_application</code>, sets <code>exception_trace</code> to true so that a crash names its routines, and turns all the assertions on. Keep them on while you develop. See section 10.</p>
 <h2>5. The engine: a calculator with no screen</h2>
 <p>Write the logic first, in a class that has never heard of a phone. <code>CALC_ENGINE</code> knows what each key does and what the display should say. That is all. See <code>src/engine/calc_engine.e</code>.</p>
 <p>Its public face is a few queries and one command for each key:</p>
@@ -369,13 +376,17 @@ built .\build\simple_phone_calc.apk
 <pre><code>EiffelOut: simple_phone_calc: system execution failed.
 EiffelOut: Following is the set of recorded exceptions:
 EiffelOut: Class / Object      Routine                Nature of exception           Effect
-EiffelOut: CALC_APP            root's creation        not_in_error:
+EiffelOut: CALC_ENGINE         press_digit            not_in_error:
 EiffelOut: &lt;0000000000000000&gt;                         Precondition violated.        Fail
+EiffelOut: CALC_ENGINE         press_digit
+EiffelOut: &lt;0000000000000000&gt;                         Routine failure.              Fail
+EiffelOut: CALC_APP            on_digit
+EiffelOut: &lt;0000000000000000&gt;                         Routine failure.              Fail
 </code></pre>
-<p>The log names the exact contract that broke: <code>not_in_error</code>. In a language without contracts, this bug would show a wrong number and say nothing. Here the phone tells you which rule was broken.</p>
+<p>The log names the exact contract that broke, <code>not_in_error</code>, and the routine it guards, <code>press_digit</code>, called from <code>on_digit</code>. The list goes on up the calls to <code>make</code>. In a language without contracts, this bug would show a wrong number and say nothing. Here the phone tells you which rule was broken.</p>
 <p>Two things to know when you read it:</p>
 <ul>
-<li><strong>The routine column says "root's creation".</strong> On the phone the trace does not name the routine, so search your code for the clause name. That is one more reason to give every clause a good name.</li>
+<li><strong>The routine names come from one line in the ECF.</strong> <code>eifphone</code> compiles with <code>gec --finalize</code>, which leaves the full trace off unless you ask for it. <code>&lt;setting name="exception_trace" value="true"/&gt;</code> asks for it. Without that line, the routine column says only "root's creation". <code>eifphone new</code> writes the line into the <code>app</code> target.</li>
 <li><strong>Lines after it about mutexes or EGL are noise.</strong> Those are Android cleaning up the process.</li>
 </ul>
 <p>For everything the app logs, not only crashes:</p>
