@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- The app target sets `exception_trace`, so a crash names its routines.
+- `HOWTO.md`: `gec` is found on the `PATH`, and `GOBO` and `GOBO_LIBRARY` are gone. Says why there are two compilers. The crash trace is from a real run.
+
 ## [1.0.0] - 2026-11-05
 
 ### Added

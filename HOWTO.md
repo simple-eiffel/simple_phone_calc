@@ -44,12 +44,17 @@ You need a Windows PC. The tool runs on Windows only. Your app runs on Android 8
 
 | Tool | Version | Used for |
 |---|---|---|
-| EiffelStudio | 25.02 | Compiling the tests on the PC, and its Eiffel base library |
+| EiffelStudio | 25.02 | Its Eiffel base library, and the tests on the PC |
 | [Gobo](https://github.com/gobo-eiffel/gobo/releases/tag/gobo-26.10) `gec` | 26.10 | Compiling Eiffel for the phone |
 | Android SDK | build-tools 36.0.0, platform android-36, platform-tools | Packaging and installing |
 | Android NDK | 30.0.16248370 | Compiling C for the phone |
 | A JDK | 17 or later | Compiling the Java helper, signing |
 | `git` | any | Getting the libraries |
+
+Why two Eiffel compilers?
+
+- **The phone needs `gec`.** Gobo ships its runtime as C source, which the NDK can compile for a phone. The EiffelStudio install has only headers and prebuilt Windows libraries, with no runtime source to compile.
+- **The tests here use EiffelStudio because of one clause.** They use its testing library, and `gec` stops on a `convert` clause in that library's `EQA_SYSTEM_PATH`, with six VYCP-4 errors. `ec` accepts the clause. With that clause cut down in a private copy, `gec` compiled the tests and all 26 passed.
 
 If you have Android's `sdkmanager`, this gets the Android parts:
 
@@ -63,10 +68,16 @@ Then tell the tool where everything is. These are the standard names:
 set ANDROID_HOME=C:\android\sdk
 set ANDROID_NDK_HOME=C:\android\sdk\ndk\30.0.16248370
 set JAVA_HOME=C:\Program Files\Java\jdk-17
-set GOBO=C:\gobo
-set GOBO_LIBRARY=C:\gobo\library
 set ISE_LIBRARY=C:\Program Files\Eiffel Software\EiffelStudio 25.02 Standard
 ```
+
+Then put Gobo's `bin` folder on your `PATH`, so the tool can find `gec`:
+
+```
+set PATH=C:\gobo\bin;%PATH%
+```
+
+You do not need `GOBO` or `GOBO_LIBRARY`. Gobo's tools work those out for themselves.
 
 The paths are examples. Use your own.
 
@@ -180,7 +191,7 @@ The app target has the engine, the screen and the phone library. It is only ever
 
 *The engine is in both targets. Only the app target knows there is a phone.*
 
-The app target also sets `console_application` and turns all the assertions on. Keep them on while you develop. See section 10.
+The app target also sets `console_application`, sets `exception_trace` to true so that a crash names its routines, and turns all the assertions on. Keep them on while you develop. See section 10.
 
 ## 5. The engine: a calculator with no screen
 
@@ -463,15 +474,19 @@ Among the lines is the answer:
 EiffelOut: simple_phone_calc: system execution failed.
 EiffelOut: Following is the set of recorded exceptions:
 EiffelOut: Class / Object      Routine                Nature of exception           Effect
-EiffelOut: CALC_APP            root's creation        not_in_error:
+EiffelOut: CALC_ENGINE         press_digit            not_in_error:
 EiffelOut: <0000000000000000>                         Precondition violated.        Fail
+EiffelOut: CALC_ENGINE         press_digit
+EiffelOut: <0000000000000000>                         Routine failure.              Fail
+EiffelOut: CALC_APP            on_digit
+EiffelOut: <0000000000000000>                         Routine failure.              Fail
 ```
 
-The log names the exact contract that broke: `not_in_error`. In a language without contracts, this bug would show a wrong number and say nothing. Here the phone tells you which rule was broken.
+The log names the exact contract that broke, `not_in_error`, and the routine it guards, `press_digit`, called from `on_digit`. The list goes on up the calls to `make`. In a language without contracts, this bug would show a wrong number and say nothing. Here the phone tells you which rule was broken.
 
 Two things to know when you read it:
 
-- **The routine column says "root's creation".** On the phone the trace does not name the routine, so search your code for the clause name. That is one more reason to give every clause a good name.
+- **The routine names come from one line in the ECF.** `eifphone` compiles with `gec --finalize`, which leaves the full trace off unless you ask for it. `<setting name="exception_trace" value="true"/>` asks for it. Without that line, the routine column says only "root's creation". `eifphone new` writes the line into the `app` target.
 - **Lines after it about mutexes or EGL are noise.** Those are Android cleaning up the process.
 
 For everything the app logs, not only crashes:
