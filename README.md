@@ -24,7 +24,7 @@ Prefer paper or a tablet? **[Download the guide as a PDF](docs/simple_phone_calc
 
 **1.0.0**
 
-- 26 tests pass on the PC.
+- 26 tests pass on Windows, macOS and Linux.
 - Nine sums tapped through the real screen pass on an emulator, at the default font size and at 1.5, and on one real phone.
 - The how-to was followed from an empty folder, with everything downloaded from GitHub.
 - The APK is under 1 MB.
@@ -37,6 +37,8 @@ With the tools from the guide installed:
 eifphone build .
 eifphone run .
 ```
+
+Building the app needs Windows; the `eifphone` tool runs only there.
 
 ## What it shows
 
